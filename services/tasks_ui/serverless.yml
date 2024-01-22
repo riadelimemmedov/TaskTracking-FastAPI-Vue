@@ -1,0 +1,61 @@
+service: tasks-ui
+
+frameworkVersion: "3"
+useDotenv: true
+
+provider:
+  name: aws
+  region: "us-east-1"
+  stage: ${opt:stage, 'development'}
+
+plugins:
+  - serverless-s3-sync
+
+custom:
+  stage: ${opt:stage, self:provider.stage}
+  bucketName: ${self:custom.stage}-task-api-sfed
+  s3Sync:
+    # A simple configuration for copying static assets
+    - bucketName: ${self:custom.bucketName}
+      localDir: dist
+
+resources:
+  Resources:
+    TasksAPIBucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: ${self:custom.bucketName}
+        PublicAccessBlockConfiguration:
+          BlockPublicAcls: false
+        OwnershipControls:
+          Rules:
+            - ObjectOwnership: ObjectWriter
+        WebsiteConfiguration:
+          IndexDocument: index.html
+          ErrorDocument: error.html
+    TasksAPIBucketPolicy:
+      Type: AWS::S3::BucketPolicy
+      Properties:
+        Bucket: !Ref TasksAPIBucket
+        PolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+            - Sid: "PublicReadGetObject"
+              Effect: "Allow"
+              Principal: "*"
+              Action: "s3:GetObject"
+              Resource:
+                Fn::Join:
+                  - ""
+                  - - "arn:aws:s3:::"
+                    - !Ref TasksAPIBucket
+                    - "/*"
+  Outputs:
+    TasksAPIBucketName:
+      Value: !Ref TasksAPIBucket
+      Export:
+        Name: s3-${self:custom.bucketName}-name
+    TasksAPIBucketArn:
+      Value: !GetAtt TasksAPIBucket.Arn
+      Export:
+        Name: s3-${self:custom.bucketName}-arn

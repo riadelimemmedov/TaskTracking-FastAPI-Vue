@@ -1,0 +1,24 @@
+name: Apply infrastructure changes
+on:
+  push:
+    paths:
+      - "infrastructure/**"
+      - ".github/workflows/infrastructure.yml"
+
+env:
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  AWS_DEFAULT_REGION: us-east-1
+  APP_ENVIRONMENT: development
+  APP_DOMAIN: #Your domain address
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infrastructure
+    steps:
+      - uses: actions/checkout@v3
+      - name: Apply changes
+        run: aws cloudformation deploy --template-file cf_tasks.yml --stack-name ${APP_ENVIRONMENT}-tasks --parameter-overrides Domain=${APP_DOMAIN}

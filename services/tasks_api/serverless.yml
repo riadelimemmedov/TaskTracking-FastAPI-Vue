@@ -1,0 +1,66 @@
+service: tasks-api
+
+frameworkVersion: "3"
+useDotenv: true
+
+provider:
+  name: aws
+  runtime: python3.9
+  region: "us-east-1"
+  stage: ${opt:stage, 'development'}
+  logRetentionInDays: 5
+  environment:
+    APP_ENVIRONMENT: ${self:provider.stage}
+    TABLE_NAME: ${self:custom.tableName}
+  iam: # new
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - dynamodb:DescribeTable
+            - dynamodb:Query
+            - dynamodb:Scan
+            - dynamodb:GetItem
+            - dynamodb:PutItem
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
+          # Allow only access to the API's table and its indexes
+          Resource:
+            - "Fn::GetAtt": [TasksAPITable, Arn]
+            - "Fn::Join":
+                ["/", ["Fn::GetAtt": [TasksAPITable, Arn], "index", "*"]]
+
+functions:
+  API:
+    handler: main.handle
+    timeout: 10
+    memorySize: 512
+    events:
+      - http:
+          path: /{proxy+}
+          method: any
+          cors:
+            origin: ${env:ALLOWED_ORIGINS}
+            maxAge: 60
+          authorizer: # new
+            name: TasksAPIAuthorizer # new
+            type: COGNITO_USER_POOLS # new
+            arn: # new
+              Fn::GetAtt: # new
+                - CognitoUserPool # new
+                - Arn # new
+custom:
+  pythonRequirements:
+    usePoetry: true
+    noDeploy:
+      - boto3 # already on Lambda
+      - botocore # already on Lambda
+  stage: ${opt:stage, self:provider.stage} # new
+  tableName: ${self:custom.stage}-task-api # new
+
+plugins:
+  - serverless-python-requirements
+
+resources:
+  - ${file(resources/cognito.yml)} # new
+  - ${file(resources/dynamodb.yml)} # new

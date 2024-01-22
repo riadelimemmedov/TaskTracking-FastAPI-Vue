@@ -1,0 +1,148 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Parameters:
+  Domain:
+    Type: String
+    Description: The DNS name of an existing Amazon Route 53 hosted zone
+    AllowedPattern: "(?!-)[a-zA-Z0-9-.]{1,63}(?<!-)"
+    ConstraintDescription: Must be a valid DNS zone name.
+Resources:
+  TasksHostedZone:
+    Type: AWS::Route53::HostedZone
+    Properties:
+      HostedZoneConfig: HostedZoneConfig
+      Name:
+        Ref: Domain
+  CloudFrontOriginAccessIdentity: # new #! Allows us to share content from a private S3 bucket
+    Type: AWS::CloudFront::CloudFrontOriginAccessIdentity
+    Properties:
+      CloudFrontOriginAccessIdentityConfig:
+        Comment: "Tasks UI"
+  VueAppS3Policy: # new #! S3 bucket policy that allows access to the CloudFront distribution
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket:
+        Fn::ImportValue: #Your s3 bucket name
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              CanonicalUser: !GetAtt CloudFrontOriginAccessIdentity.S3CanonicalUserId
+            Action: "s3:GetObject"
+            Resource:
+              Fn::Join:
+                - "/"
+                - - Fn::ImportValue: #Your s3 arn value
+                  - "*"
+  APICachePolicy: # new #! Defines time to live (TTL) and which cookies/headers to forward along to the destination
+    Type: AWS::CloudFront::CachePolicy
+    Properties:
+      CachePolicyConfig:
+        DefaultTTL: 0
+        MaxTTL: 1
+        MinTTL: 0
+        Name: APICachePolicy
+        ParametersInCacheKeyAndForwardedToOrigin:
+          CookiesConfig:
+            CookieBehavior: all
+          EnableAcceptEncodingGzip: true
+          HeadersConfig:
+            HeaderBehavior: whitelist
+            Headers:
+              - Authorization
+              - Content-Type
+          QueryStringsConfig:
+            QueryStringBehavior: none
+  VueAppCachePolicy: # new #! Defines time to live (TTL) and which cookies/headers to forward along to the destination
+    Type: AWS::CloudFront::CachePolicy
+    Properties:
+      CachePolicyConfig:
+        DefaultTTL: 30
+        MaxTTL: 60
+        MinTTL: 0
+        Name: VueAppCachePolicy
+        ParametersInCacheKeyAndForwardedToOrigin:
+          CookiesConfig:
+            CookieBehavior: all
+          EnableAcceptEncodingGzip: true
+          HeadersConfig:
+            HeaderBehavior: whitelist
+            Headers:
+              - Content-Type
+          QueryStringsConfig:
+            QueryStringBehavior: none
+  TasksCloudFront: # new #! Defines which domain and HTTPS certificate to use for the CloudFront distribution
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Origins:
+          - DomainName:
+              Fn::Join:
+                - "."
+                - - Fn::ImportValue: #Your s3 bucket name
+                  - "s3.amazonaws.com"
+            Id: vueApp
+            S3OriginConfig:
+              OriginAccessIdentity:
+                Fn::Join:
+                  - ""
+                  - - "origin-access-identity/cloudfront/"
+                    - Ref: CloudFrontOriginAccessIdentity
+          - DomainName: #Your domain name related api gateway
+            Id: api
+            OriginPath: /development
+            CustomOriginConfig:
+              HTTPSPort: "443"
+              OriginProtocolPolicy: https-only
+        Enabled: "true"
+        DefaultRootObject: index.html
+        Aliases:
+          - Ref: Domain
+        DefaultCacheBehavior:
+          AllowedMethods:
+            - DELETE
+            - GET
+            - HEAD
+            - OPTIONS
+            - PATCH
+            - POST
+            - PUT
+          TargetOriginId: vueApp
+          ViewerProtocolPolicy: redirect-to-https
+          CachePolicyId:
+            Ref: VueAppCachePolicy
+        CacheBehaviors:
+          - AllowedMethods:
+              - DELETE
+              - GET
+              - HEAD
+              - OPTIONS
+              - PATCH
+              - POST
+              - PUT
+            CachePolicyId:
+              Ref: APICachePolicy
+            PathPattern: api/*
+            TargetOriginId: api
+            ViewerProtocolPolicy: redirect-to-https
+        ViewerCertificate:
+          AcmCertificateArn: #Your https certificate arn value
+          SslSupportMethod: sni-only
+          MinimumProtocolVersion: TLSv1.2_2021
+  CloudFrontDNSRecord: # new #! DNS record in Route53
+    Type: AWS::Route53::RecordSet
+    Properties:
+      AliasTarget:
+        DNSName: !GetAtt TasksCloudFront.DomainName
+        HostedZoneId: #Route53 hosted zone id
+      HostedZoneId:
+        Ref: TasksHostedZone
+      Name:
+        Ref: Domain
+      Type: A
+
+Outputs:
+  HostedZoneId:
+    Description: Hosted zone ID
+    Value:
+      Ref: TasksHostedZone

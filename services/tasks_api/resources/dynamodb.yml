@@ -1,0 +1,29 @@
+Resources:
+  TasksAPITable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: ${self:custom.tableName}
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: PK
+          AttributeType: S
+        - AttributeName: SK
+          AttributeType: S
+        - AttributeName: GS1PK
+          AttributeType: S
+        - AttributeName: GS1SK
+          AttributeType: S
+      KeySchema:
+        - AttributeName: PK
+          KeyType: HASH
+        - AttributeName: SK
+          KeyType: RANGE
+      GlobalSecondaryIndexes:
+        - IndexName: GS1
+          KeySchema:
+            - AttributeName: GS1PK
+              KeyType: HASH
+            - AttributeName: GS1SK
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL

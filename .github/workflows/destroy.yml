@@ -1,0 +1,53 @@
+name: Destroy cloud resources
+on: workflow_dispatch
+env:
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  AWS_DEFAULT_REGION: us-east-1
+  APP_ENVIRONMENT: development
+jobs:
+  destroy-global-infrastructure:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infrastructure
+    steps:
+      - uses: actions/checkout@v3
+      - name: Destroy global infrastructure
+        run: aws cloudformation delete-stack --stack-name ${APP_ENVIRONMENT}-tasks-check
+  destroy-api:
+    needs: [destroy-global-infrastructure]
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/tasks_api
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: "16.x"
+      - name: Install Serverless Framework
+        run: npm install -g serverless
+      - name: Install NPM dependencies
+        run: npm install
+      - name: Destroy
+        run: sls remove --stage development --verbose
+  destroy-ui:
+    needs: [destroy-global-infrastructure]
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/tasks_ui
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: "16.x"
+      - name: Install Serverless Framework
+        run: npm install -g serverless
+      - name: Install NPM dependencies
+        run: npm install
+      - name: Destroy
+        run: sls remove --stage development --verbose
