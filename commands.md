@@ -1,4 +1,4 @@
-# Useful command which help to you testing and debugging process 
+# Useful command which help to you testing and debugging process
 
 - Run tests with code coverage:
   - `poetry run coverage run -m pytest`
