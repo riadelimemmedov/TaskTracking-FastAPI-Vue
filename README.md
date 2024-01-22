@@ -1,4 +1,4 @@
-# Serverless API and Vue Application on AWS
+# Serverless FastAPI and Vue Application on AWS
 
 This repository demonstrates how to build and deploy a complete and scalable application without the need to manage any servers.
 
