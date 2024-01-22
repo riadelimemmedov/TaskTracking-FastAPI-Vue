@@ -1,6 +1,6 @@
 # Serverless API and Vue Application on AWS
 
-Congratulations! You have successfully set up a serverless API and Vue application running on AWS. This repository demonstrates how to build and deploy a complete and scalable application without the need to manage any servers.
+This repository demonstrates how to build and deploy a complete and scalable application without the need to manage any servers.
 
 ## Features
 
