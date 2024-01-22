@@ -34,4 +34,4 @@ To get started with this project, please follow the instructions below:
 
 ## Our architecture like this format
 
-![alt](https://raw.githubusercontent.com/riadelimemmedov/TaskManagementSystem-FastAPIVue-Aws/main/architecture.png)
+![alt](https://github.com/riadelimemmedov/TaskManagementSystem-FastAPIVue-Aws/blob/main/architecture.png)
