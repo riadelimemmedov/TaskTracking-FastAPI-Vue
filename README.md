@@ -31,3 +31,7 @@ To get started with this project, please follow the instructions below:
 4. Configure the AWS services and credentials required for the application.
 5. Deploy the Serverless API and Vue application to AWS.
 6. Access and test the deployed application.
+
+## Our architecture like this format
+
+![alt](https://raw.githubusercontent.com/riadelimemmedov/TaskManagementSystem-FastAPIVue-Aws/main/architecture.png)
